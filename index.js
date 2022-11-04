@@ -26,6 +26,7 @@ connection
 
 app.use("/", gamesController);
 app.use("/", usersController);
+app.use("/image", express.static("./image"));
 
 app.listen(8080, () => {
   console.log("API Rodando!");

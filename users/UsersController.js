@@ -27,7 +27,6 @@ router.post("/login", async (req, res) => {
     );
   }
   const correctPassword = bcrypt.compareSync(password, user.password);
-  console.log("correctPassword:", correctPassword);
 
   if (!correctPassword) {
     return res.status(401), res.json({ message: "Credenciais invalidas!" });

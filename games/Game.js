@@ -7,6 +7,11 @@ const Game = connection.define("games", {
     primaryKey: true,
     type: Sequelize.STRING,
   },
+  image: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+
   name: {
     type: Sequelize.STRING,
     allowNull: false,

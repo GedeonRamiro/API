@@ -3,10 +3,12 @@ const router = express.Router();
 const Game = require("./Game");
 const auth = require("../middleware/auth");
 const generateId = require("../libs/generateId");
+const uploadImage = require("../middleware/uploadImage");
+const deleteImage = require("../utils/deleteImage");
 
 const LIMITE_GAME_PAGE = 5;
 
-router.get("/games", auth, async (req, res) => {
+router.get("/games", async (req, res) => {
   const games = await Game.findAll({
     raw: true,
     order: [["createdAt", "DESC"]],
@@ -18,8 +20,6 @@ router.get("/games", auth, async (req, res) => {
 
 router.get("/games/page/:num", async (req, res) => {
   const page = req.params.num;
-
-  console.log(page);
 
   let offset = 0;
 
@@ -78,20 +78,27 @@ router.get("/game/:id", async (req, res) => {
   res.json(game);
 });
 
-router.post("/game", async (req, res) => {
+router.post("/game", uploadImage.single("image"), async (req, res) => {
   const { name, year, price } = req.body;
+  const image = req.file?.filename;
 
-  if (name === undefined || year === undefined || price === undefined) {
+  if (
+    image === undefined ||
+    name === undefined ||
+    year === undefined ||
+    price === undefined
+  ) {
     return res.status(400), res.json({ message: "Preencha todos os campos!" });
   }
 
-  if (name === "" || year === "" || price === "") {
+  if (image === "" || name === "" || year === "" || price === "") {
     return res.status(400), res.json({ message: "Preencha todos os campos!" });
   }
 
   try {
     await Game.create({
       id: generateId(),
+      image,
       name,
       year,
       price,
@@ -107,6 +114,13 @@ router.post("/game", async (req, res) => {
 router.delete("/game/:id", async (req, res) => {
   const id = req.params.id;
 
+  const gameId = await Game.findOne({
+    where: { id: id },
+  });
+
+  const deleteImageStorage = gameId.dataValues.image;
+  deleteImage(deleteImageStorage);
+
   const game = await Game.destroy({
     where: { id: id },
   });
@@ -117,9 +131,9 @@ router.delete("/game/:id", async (req, res) => {
   res.json({ message: "Game excluído com sucesso!" });
 });
 
-router.put("/game/:id", async (req, res) => {
+router.put("/game/:id", uploadImage.single("image"), async (req, res) => {
   const id = req.params.id;
-  const { name, year, price } = req.body;
+  const { image, name, year, price } = req.body;
 
   const gameId = await Game.findOne({
     where: { id: id },
@@ -127,8 +141,23 @@ router.put("/game/:id", async (req, res) => {
 
   if (!gameId) return res.status(404);
 
+  if (req.file?.filename) {
+    const imageStorage = req.file.filename;
+
+    const deleteImageStorage = gameId.dataValues.image;
+    deleteImage(deleteImageStorage);
+
+    await Game.update(
+      { image: imageStorage, name, year, price },
+      {
+        where: { id: id },
+      }
+    );
+    return res.status(200), res.json({ message: "Game editado com sucesso!" });
+  }
+
   await Game.update(
-    { name: name, year: year, price: price },
+    { name, year, price },
     {
       where: { id: id },
     }
